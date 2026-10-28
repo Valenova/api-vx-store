@@ -4,10 +4,40 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Status Utama API
 app.get('/', (req, res) => res.json({ status: true, message: 'API VALENX STORE 24/7 Online 🚀' }));
 
-// 1. Fitur Stiker Brat (/brat) - BUKTI SUDAH BERHASIL
+// 1. TikTok Downloader (TikWM - 100% Anti-Block Vercel)
+const handleTikTok = async (req, res) => {
+    const url = req.query.url || req.query.link;
+    if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
+
+    try {
+        const response = await fetch(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
+        const data = await response.json();
+        if (data && data.code === 0 && data.data) {
+            return res.json({
+                status: true,
+                creator: 'VALENX STORE',
+                result: data.data.play || data.data.wmplay
+            });
+        }
+    } catch (e) {}
+
+    // Backup Server TikTok
+    try {
+        const r2 = await fetch(`https://bk9.fun/download/tiktok?url=${encodeURIComponent(url)}`);
+        const d2 = await r2.json();
+        if (d2 && d2.status && d2.BK9) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: d2.BK9.video || d2.BK9 });
+        }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gagal mengambil video TikTok.' });
+};
+app.get('/tiktok', handleTikTok);
+app.get('/tt', handleTikTok);
+
+// 2. Stiker Brat (HuggingFace)
 app.get('/brat', async (req, res) => {
     const text = req.query.text || req.query.q;
     if (!text) return res.json({ status: false, message: 'Isi parameter text!' });
@@ -18,59 +48,29 @@ app.get('/brat', async (req, res) => {
     });
 });
 
-// 2. Fitur TikTok Downloader (Mendukung /tiktok dan /tt)
-const handleTikTok = async (req, res) => {
-    const url = req.query.url || req.query.link;
-    if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
-
-    // Server 1: Tiklydown
-    try {
-        const r1 = await fetch(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`);
-        const d1 = await r1.json();
-        if (d1 && (d1.video || d1.url)) {
-            return res.json({
-                status: true,
-                creator: 'VALENX STORE',
-                result: d1.video ? d1.video.noWatermark : d1.url
-            });
-        }
-    } catch (e) {}
-
-    // Server 2: Agatz Backup
-    try {
-        const r2 = await fetch(`https://api.agatz.xyz/api/tiktok?url=${encodeURIComponent(url)}`);
-        const d2 = await r2.json();
-        if (d2 && d2.data) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: d2.data });
-        }
-    } catch (e) {}
-
-    res.json({ status: false, message: 'Gagal mengambil video TikTok. Server scraper sedang down.' });
-};
-app.get('/tiktok', handleTikTok);
-app.get('/tt', handleTikTok);
-
-// 3. Fitur Instagram Downloader (Mendukung /igdl dan /ig)
+// 3. Instagram Downloader (Global Scraper Multi-Backup)
 const handleIG = async (req, res) => {
     let url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
     if (url.includes('instagram.com')) url = url.split('?')[0];
 
-    // Server 1: Agatz
+    // Server 1
     try {
-        const r1 = await fetch(`https://api.agatz.xyz/api/instagram?url=${encodeURIComponent(url)}`);
+        const r1 = await fetch(`https://bk9.fun/download/ig?url=${encodeURIComponent(url)}`);
         const d1 = await r1.json();
-        if (d1 && d1.data) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: d1.data });
+        if (d1 && d1.status && d1.BK9) {
+            const media = Array.isArray(d1.BK9) ? d1.BK9[0]?.url : (d1.BK9.url || d1.BK9);
+            return res.json({ status: true, creator: 'VALENX STORE', result: media });
         }
     } catch (e) {}
 
-    // Server 2: Vreden
+    // Server 2
     try {
-        const r2 = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
+        const r2 = await fetch(`https://api.dreaded.site/api/igdl?url=${encodeURIComponent(url)}`);
         const d2 = await r2.json();
-        if (d2 && d2.result) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: d2.result });
+        if (d2 && d2.data) {
+            const media = Array.isArray(d2.data) ? d2.data[0]?.url : (d2.data.url || d2.data);
+            return res.json({ status: true, creator: 'VALENX STORE', result: media });
         }
     } catch (e) {}
 
@@ -79,16 +79,17 @@ const handleIG = async (req, res) => {
 app.get('/igdl', handleIG);
 app.get('/ig', handleIG);
 
-// 4. Fitur Pinterest Search (Mendukung /pin dan /pinterest)
+// 4. Pinterest Search
 const handlePin = async (req, res) => {
     const query = req.query.query || req.query.q || req.query.text;
     if (!query) return res.json({ status: false, message: 'Isi parameter query!' });
 
     try {
-        const r = await fetch(`https://api.agatz.xyz/api/pin?message=${encodeURIComponent(query)}`);
-        const d = await r.json();
-        if (d && d.data) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: d.data });
+        const r1 = await fetch(`https://bk9.fun/search/pinterest?q=${encodeURIComponent(query)}`);
+        const d1 = await r1.json();
+        if (d1 && d1.status && d1.BK9 && d1.BK9.length > 0) {
+            const images = d1.BK9.map(item => item.images || item.image || item.url || item);
+            return res.json({ status: true, creator: 'VALENX STORE', result: images });
         }
     } catch (e) {}
 
@@ -97,7 +98,7 @@ const handlePin = async (req, res) => {
 app.get('/pin', handlePin);
 app.get('/pinterest', handlePin);
 
-// 5. Fitur ToURL / ImgBB Uploader (/tourl)
+// 5. ToURL Uploader (ImgBB)
 app.all('/tourl', async (req, res) => {
     let media = req.query.url || req.body.url || req.body.image || req.body.base64;
     if (!media) return res.json({ status: false, message: 'Parameter media kosong' });
@@ -122,6 +123,22 @@ app.all('/tourl', async (req, res) => {
     } catch (e) {}
 
     res.json({ status: false, message: 'Gagal upload gambar ke server.' });
+});
+
+// 6. AI GPT
+app.get('/ai', async (req, res) => {
+    const text = req.query.text || req.query.q;
+    if (!text) return res.json({ status: false, message: 'Isi parameter text!' });
+
+    try {
+        const r = await fetch(`https://bk9.fun/ai/gpt?q=${encodeURIComponent(text)}`);
+        const d = await r.json();
+        if (d && d.status && d.BK9) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: d.BK9 });
+        }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gagal merespon AI.' });
 });
 
 module.exports = app;
