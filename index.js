@@ -25,7 +25,6 @@ app.all('/tourl', async (req, res) => {
         });
     }
 
-    // Bersihkan header base64 jika dikirim dari Bot WA
     if (typeof media === 'string' && media.includes('base64,')) {
         media = media.split('base64,')[1];
     }
@@ -51,7 +50,6 @@ app.all('/tourl', async (req, res) => {
         }
     } catch (e) {}
 
-    // Fallback jika media berupa link langsung
     if (typeof media === 'string' && media.startsWith('http')) {
         return res.json({
             status: true,
@@ -63,60 +61,54 @@ app.all('/tourl', async (req, res) => {
     res.json({ status: false, message: 'Gagal mengunggah media ke server.' });
 });
 
-// 3. Fitur Instagram Downloader (/igdl) - Multi-Server & URL Cleaner
+// 3. Fitur Instagram Downloader (/igdl) - Multi-Server Tanpa Siputzx
 app.get('/igdl', async (req, res) => {
     let { url } = req.query;
     if (!url) return res.json({ status: false, message: 'Masukkan parameter url!' });
 
-    // Auto-clean URL Instagram dari parameter berlebih (?mdxt=..., ?rpxt=...)
     try {
         if (url.includes('instagram.com')) {
             url = url.split('?')[0];
         }
     } catch (e) {}
 
-    // Server 1: Siputzx
+    // Server 1: Agatz
     try {
-        const res1 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(url)}`);
+        const res1 = await fetch(`https://api.agatz.xyz/api/instagram?url=${encodeURIComponent(url)}`);
         const data1 = await res1.json();
-        if (data1 && data1.status && (data1.data || data1.result)) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: data1.data || data1.result });
+        if (data1?.data) {
+            const media = Array.isArray(data1.data) ? (data1.data[0]?.url || data1.data[0]) : (data1.data.url || data1.data);
+            if (media) return res.json({ status: true, creator: 'VALENX STORE', result: media });
         }
     } catch (e) {}
 
-    // Server 2: Vreden
+    // Server 2: Widipe
     try {
-        const res2 = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
+        const res2 = await fetch(`https://widipe.com/download/igdl?url=${encodeURIComponent(url)}`);
         const data2 = await res2.json();
-        if (data2 && data2.result) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: data2.result });
+        if (data2?.result && data2.result.length > 0) {
+            const media = data2.result[0].url || data2.result[0];
+            if (media) return res.json({ status: true, creator: 'VALENX STORE', result: media });
         }
     } catch (e) {}
 
-    // Server 3: Widipe
-    try {
-        const res3 = await fetch(`https://widipe.com/download/igdl?url=${encodeURIComponent(url)}`);
-        const data3 = await res3.json();
-        if (data3 && data3.status && data3.result) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: data3.result });
-        }
-    } catch (e) {}
-
-    res.json({ status: false, message: 'Gagal mengambil media Instagram. Semua server scraper sedang down.' });
+    res.json({ status: false, message: 'Gagal mengambil media Instagram.' });
 });
 
-// 4. Fitur TikTok Downloader (/tiktok)
+// 4. Fitur TikTok Downloader (/tiktok) - TikWM Stable
 app.get('/tiktok', async (req, res) => {
     const { url } = req.query;
     if (!url) return res.json({ status: false, message: 'Masukkan parameter url!' });
 
     try {
-        const response = await fetch(`https://api.siputzx.my.id/api/d/tiktok?url=${encodeURIComponent(url)}`);
+        const response = await fetch(`https://www.tikwm.com/api/?url=${encodeURIComponent(url)}`);
         const data = await response.json();
-        res.json({ status: true, creator: 'VALENX STORE', result: data.data || data });
-    } catch (e) {
-        res.json({ status: false, message: 'Gagal mengambil video TikTok.' });
-    }
+        if (data?.data?.play) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: data.data.play });
+        }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gagal mengambil video TikTok.' });
 });
 
 // 5. Fitur Stiker Brat (/brat)
@@ -136,18 +128,36 @@ app.get('/brat', async (req, res) => {
     }
 });
 
-// 6. Fitur AI / GPT Search (/ai)
+// 6. Fitur AI / GPT Search (/ai) - Agatz Ragbot
 app.get('/ai', async (req, res) => {
     const { text } = req.query;
     if (!text) return res.json({ status: false, message: 'Masukkan parameter text!' });
 
     try {
-        const response = await fetch(`https://api.siputzx.my.id/api/ai/gpt3?prompt=${encodeURIComponent(text)}`);
+        const response = await fetch(`https://api.agatz.xyz/api/ragbot?message=${encodeURIComponent(text)}`);
         const data = await response.json();
-        res.json({ status: true, creator: 'VALENX STORE', result: data.data || data.result });
-    } catch (e) {
-        res.json({ status: false, message: 'Gagal merespon permintaan AI.' });
-    }
+        if (data?.data) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: data.data });
+        }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gagal merespon permintaan AI.' });
+});
+
+// 7. Fitur Pinterest Search (/pin)
+app.get('/pin', async (req, res) => {
+    const { query } = req.query;
+    if (!query) return res.json({ status: false, message: 'Masukkan parameter query!' });
+
+    try {
+        const response = await fetch(`https://api.agatz.xyz/api/pinterest?message=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        if (data?.data && data.data.length > 0) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: data.data });
+        }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gagal mencari gambar di Pinterest.' });
 });
 
 module.exports = app;
