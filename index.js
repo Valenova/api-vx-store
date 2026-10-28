@@ -13,26 +13,9 @@ app.get('/', (req, res) => {
     });
 });
 
-// 2. Fitur Stiker Brat (/brat) - Server Generator Stabil
-app.get('/brat', async (req, res) => {
-    const { text } = req.query;
-    if (!text) return res.json({ status: false, message: 'Masukkan parameter text!' });
-
-    try {
-        const bratUrl = `https://aqul-brat.hf.space/api/brat?text=${encodeURIComponent(text)}`;
-        res.json({
-            status: true,
-            creator: 'VALENX STORE',
-            result: bratUrl
-        });
-    } catch (e) {
-        res.json({ status: false, message: 'Gagal membuat stiker brat.' });
-    }
-});
-
-// 3. Fitur ToURL / ImgBB Uploader (/tourl) - Support URL & Base64 Chat WA
+// 2. Fitur ToURL / ImgBB Uploader (/tourl)
 app.all('/tourl', async (req, res) => {
-    const media = req.query.url || req.body.url || req.body.image || req.body.base64;
+    let media = req.query.url || req.body.url || req.body.image || req.body.base64;
     const apiKey = '6d207e02198a847aa98d0a2a901485a5';
 
     if (!media) {
@@ -40,6 +23,11 @@ app.all('/tourl', async (req, res) => {
             status: false, 
             message: 'Masukkan parameter url/image media!' 
         });
+    }
+
+    // Bersihkan header base64 jika dikirim dari Bot WA
+    if (typeof media === 'string' && media.includes('base64,')) {
+        media = media.split('base64,')[1];
     }
 
     try {
@@ -54,47 +42,70 @@ app.all('/tourl', async (req, res) => {
 
         const data = await response.json();
 
-        if (data && data.success) {
+        if (data && data.success && data.data && data.data.url) {
             return res.json({
                 status: true,
                 creator: 'VALENX STORE',
                 result: data.data.url
             });
-        } else {
-            return res.json({ status: false, message: 'Gagal upload gambar ke ImgBB.' });
         }
-    } catch (e) {
-        res.json({ status: false, message: 'Terjadi kesalahan upload.', error: e.message });
+    } catch (e) {}
+
+    // Fallback jika media berupa link langsung
+    if (typeof media === 'string' && media.startsWith('http')) {
+        return res.json({
+            status: true,
+            creator: 'VALENX STORE',
+            result: media
+        });
     }
+
+    res.json({ status: false, message: 'Gagal mengunggah media ke server.' });
 });
 
-// 4. Fitur Instagram Downloader (/igdl) - Multi-Backup Server
+// 3. Fitur Instagram Downloader (/igdl) - Multi-Server & URL Cleaner
 app.get('/igdl', async (req, res) => {
-    const { url } = req.query;
+    let { url } = req.query;
     if (!url) return res.json({ status: false, message: 'Masukkan parameter url!' });
 
-    // Server Utama (Vreden)
+    // Auto-clean URL Instagram dari parameter berlebih (?mdxt=..., ?rpxt=...)
     try {
-        const res1 = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
+        if (url.includes('instagram.com')) {
+            url = url.split('?')[0];
+        }
+    } catch (e) {}
+
+    // Server 1: Siputzx
+    try {
+        const res1 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(url)}`);
         const data1 = await res1.json();
-        if (data1 && data1.result) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: data1.result });
+        if (data1 && data1.status && (data1.data || data1.result)) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: data1.data || data1.result });
         }
     } catch (e) {}
 
-    // Server Cadangan (Siputzx)
+    // Server 2: Vreden
     try {
-        const res2 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(url)}`);
+        const res2 = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
         const data2 = await res2.json();
-        if (data2 && data2.data) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: data2.data });
+        if (data2 && data2.result) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: data2.result });
         }
     } catch (e) {}
 
-    res.json({ status: false, message: 'Gagal mengambil media Instagram. Server scraper sedang bermasalah.' });
+    // Server 3: Widipe
+    try {
+        const res3 = await fetch(`https://widipe.com/download/igdl?url=${encodeURIComponent(url)}`);
+        const data3 = await res3.json();
+        if (data3 && data3.status && data3.result) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: data3.result });
+        }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gagal mengambil media Instagram. Semua server scraper sedang down.' });
 });
 
-// 5. Fitur TikTok Downloader (/tiktok)
+// 4. Fitur TikTok Downloader (/tiktok)
 app.get('/tiktok', async (req, res) => {
     const { url } = req.query;
     if (!url) return res.json({ status: false, message: 'Masukkan parameter url!' });
@@ -105,6 +116,23 @@ app.get('/tiktok', async (req, res) => {
         res.json({ status: true, creator: 'VALENX STORE', result: data.data || data });
     } catch (e) {
         res.json({ status: false, message: 'Gagal mengambil video TikTok.' });
+    }
+});
+
+// 5. Fitur Stiker Brat (/brat)
+app.get('/brat', async (req, res) => {
+    const { text } = req.query;
+    if (!text) return res.json({ status: false, message: 'Masukkan parameter text!' });
+
+    try {
+        const bratUrl = `https://aqul-brat.hf.space/api/brat?text=${encodeURIComponent(text)}`;
+        res.json({
+            status: true,
+            creator: 'VALENX STORE',
+            result: bratUrl
+        });
+    } catch (e) {
+        res.json({ status: false, message: 'Gagal membuat stiker brat.' });
     }
 });
 
