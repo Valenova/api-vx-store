@@ -13,13 +13,13 @@ app.get('/', (req, res) => {
     });
 });
 
-// 2. Fitur Stiker Brat (/brat)
+// 2. Fitur Stiker Brat (/brat) - Server Generator Stabil
 app.get('/brat', async (req, res) => {
     const { text } = req.query;
-    if (!text) return res.json({ status: false, message: 'Masukkan parameter text! Contoh: /brat?text=halo' });
+    if (!text) return res.json({ status: false, message: 'Masukkan parameter text!' });
 
     try {
-        const bratUrl = `https://api.siputzx.my.id/api/m/brat?text=${encodeURIComponent(text)}`;
+        const bratUrl = `https://aqul-brat.hf.space/api/brat?text=${encodeURIComponent(text)}`;
         res.json({
             status: true,
             creator: 'VALENX STORE',
@@ -30,21 +30,21 @@ app.get('/brat', async (req, res) => {
     }
 });
 
-// 3. Fitur ToURL / Image Uploader (/tourl)
+// 3. Fitur ToURL / ImgBB Uploader (/tourl) - Support URL & Base64 Chat WA
 app.all('/tourl', async (req, res) => {
-    const mediaUrl = req.query.url || req.body.url;
-    const apiKey = req.query.key || req.body.key || '6d207e02198a847aa98d0a2a901485a5';
+    const media = req.query.url || req.body.url || req.body.image || req.body.base64;
+    const apiKey = '6d207e02198a847aa98d0a2a901485a5';
 
-    if (!mediaUrl) {
+    if (!media) {
         return res.json({ 
             status: false, 
-            message: 'Masukkan parameter url media! Contoh: /tourl?url=LINK_GAMBAR' 
+            message: 'Masukkan parameter url/image media!' 
         });
     }
 
     try {
         const formData = new URLSearchParams();
-        formData.append('image', mediaUrl);
+        formData.append('image', media);
 
         const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
             method: 'POST',
@@ -61,34 +61,37 @@ app.all('/tourl', async (req, res) => {
                 result: data.data.url
             });
         } else {
-            return res.json({ status: false, message: 'Gagal mengunggah gambar.' });
+            return res.json({ status: false, message: 'Gagal upload gambar ke ImgBB.' });
         }
     } catch (e) {
         res.json({ status: false, message: 'Terjadi kesalahan upload.', error: e.message });
     }
 });
 
-// 4. Fitur Instagram Downloader (/igdl - Backup Scraper)
+// 4. Fitur Instagram Downloader (/igdl) - Multi-Backup Server
 app.get('/igdl', async (req, res) => {
     const { url } = req.query;
     if (!url) return res.json({ status: false, message: 'Masukkan parameter url!' });
 
+    // Server Utama (Vreden)
     try {
-        // Menggunakan API backup downloader IG yang lebih stabil
-        const response = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(url)}`);
-        const data = await response.json();
-        
-        if (data && data.status && data.data) {
-            res.json({ status: true, creator: 'VALENX STORE', result: data.data });
-        } else {
-            // Backup endpoint jika endpoint pertama gagal
-            const backupRes = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
-            const backupData = await backupRes.json();
-            res.json({ status: true, creator: 'VALENX STORE', result: backupData.result || backupData });
+        const res1 = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
+        const data1 = await res1.json();
+        if (data1 && data1.result) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: data1.result });
         }
-    } catch (e) {
-        res.json({ status: false, message: 'Gagal mengambil media Instagram.' });
-    }
+    } catch (e) {}
+
+    // Server Cadangan (Siputzx)
+    try {
+        const res2 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(url)}`);
+        const data2 = await res2.json();
+        if (data2 && data2.data) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: data2.data });
+        }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gagal mengambil media Instagram. Server scraper sedang bermasalah.' });
 });
 
 // 5. Fitur TikTok Downloader (/tiktok)
