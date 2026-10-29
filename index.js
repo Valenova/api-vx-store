@@ -6,7 +6,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.get('/', (req, res) => res.json({ status: true, message: 'API VALENX STORE 24/7 Online 🚀' }));
 
-// 1. TikTok Downloader (TikWM - SUDAH BERHASIL 100%)
+// 1. TikTok Downloader (TikWM - 100% SUDAH BERHASIL)
 const handleTikTok = async (req, res) => {
     const url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
@@ -28,16 +28,28 @@ const handleTikTok = async (req, res) => {
 app.get('/tiktok', handleTikTok);
 app.get('/tt', handleTikTok);
 
-// 2. AI Chat (Pollinations AI - Bebas Blokir Vercel & Sangat Cepat)
+// 2. AI Chat (Wajib Bahasa Indonesia + Multi-Backup Server)
 app.get('/ai', async (req, res) => {
     const text = req.query.text || req.query.q;
     if (!text) return res.json({ status: false, message: 'Isi parameter text!' });
 
+    // Server 1: Pollinations + System Prompt Bahasa Indonesia
     try {
-        const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(text)}`);
+        const promptIndo = `Jawablah selalu dalam Bahasa Indonesia yang santai, ramah, dan membantu: ${text}`;
+        const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptIndo)}`);
         const replyText = await response.text();
-        if (replyText) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: replyText });
+        
+        if (replyText && !replyText.includes('Free limit reached') && !replyText.includes('Please wait')) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: replyText.trim() });
+        }
+    } catch (e) {}
+
+    // Server 2 (Backup Automatic): BK9 AI
+    try {
+        const r2 = await fetch(`https://bk9.fun/ai/gpt?q=${encodeURIComponent(text)}`);
+        const d2 = await r2.json();
+        if (d2 && d2.status && d2.BK9) {
+            return res.json({ status: true, creator: 'VALENX STORE', result: d2.BK9 });
         }
     } catch (e) {}
 
@@ -55,7 +67,7 @@ app.get('/brat', async (req, res) => {
     });
 });
 
-// 4. Pinterest Search (Rotasi 3 Server Scraper)
+// 4. Pinterest Search (Format Array Gambar Langsung)
 const handlePin = async (req, res) => {
     const query = req.query.query || req.query.q || req.query.text;
     if (!query) return res.json({ status: false, message: 'Isi parameter query!' });
@@ -64,17 +76,20 @@ const handlePin = async (req, res) => {
     try {
         const r1 = await fetch(`https://api.vreden.web.id/api/pinterest?query=${encodeURIComponent(query)}`);
         const d1 = await r1.json();
-        if (d1 && d1.result && d1.result.length > 0) {
+        if (d1 && d1.result && Array.isArray(d1.result) && d1.result.length > 0) {
             return res.json({ status: true, creator: 'VALENX STORE', result: d1.result });
         }
     } catch (e) {}
 
-    // Server 2: Siputzx
+    // Server 2: BK9
     try {
-        const r2 = await fetch(`https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`);
+        const r2 = await fetch(`https://bk9.fun/search/pinterest?q=${encodeURIComponent(query)}`);
         const d2 = await r2.json();
-        if (d2 && d2.data && d2.data.length > 0) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: d2.data });
+        if (d2 && d2.status && Array.isArray(d2.BK9) && d2.BK9.length > 0) {
+            const cleanImgs = d2.BK9.map(item => typeof item === 'string' ? item : (item.images || item.image || item.url)).filter(Boolean);
+            if (cleanImgs.length > 0) {
+                return res.json({ status: true, creator: 'VALENX STORE', result: cleanImgs });
+            }
         }
     } catch (e) {}
 
@@ -83,29 +98,42 @@ const handlePin = async (req, res) => {
 app.get('/pin', handlePin);
 app.get('/pinterest', handlePin);
 
-// 5. Instagram Downloader (Rotasi Multi-Server)
+// 5. Instagram Downloader (Pembersih Link + Backup Multi-Server)
 const handleIG = async (req, res) => {
     let url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
-    if (url.includes('instagram.com')) url = url.split('?')[0];
 
-    // Server 1: Vreden
+    if (url.includes('instagram.com')) {
+        url = url.split('?')[0];
+    }
+
+    // Server 1: BK9
     try {
-        const r1 = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
+        const r1 = await fetch(`https://bk9.fun/download/ig?url=${encodeURIComponent(url)}`);
         const d1 = await r1.json();
-        if (d1 && d1.result) {
-            const media = Array.isArray(d1.result) ? d1.result[0]?.url || d1.result[0] : d1.result.url || d1.result;
-            return res.json({ status: true, creator: 'VALENX STORE', result: media });
+        if (d1 && d1.status && d1.BK9) {
+            let resMedia = d1.BK9;
+            if (Array.isArray(resMedia)) resMedia = resMedia[0]?.url || resMedia[0];
+            else if (typeof resMedia === 'object') resMedia = resMedia.url || resMedia.link || resMedia;
+            
+            if (resMedia && typeof resMedia === 'string') {
+                return res.json({ status: true, creator: 'VALENX STORE', result: resMedia });
+            }
         }
     } catch (e) {}
 
-    // Server 2: Siputzx
+    // Server 2: Vreden
     try {
-        const r2 = await fetch(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(url)}`);
+        const r2 = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
         const d2 = await r2.json();
-        if (d2 && d2.data) {
-            const media = Array.isArray(d2.data) ? d2.data[0]?.url || d2.data[0] : d2.data.url || d2.data;
-            return res.json({ status: true, creator: 'VALENX STORE', result: media });
+        if (d2 && d2.result) {
+            let resMedia = d2.result;
+            if (Array.isArray(resMedia)) resMedia = resMedia[0]?.url || resMedia[0];
+            else if (typeof resMedia === 'object') resMedia = resMedia.url || resMedia;
+
+            if (resMedia && typeof resMedia === 'string') {
+                return res.json({ status: true, creator: 'VALENX STORE', result: resMedia });
+            }
         }
     } catch (e) {}
 
