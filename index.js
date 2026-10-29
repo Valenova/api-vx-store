@@ -6,7 +6,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.get('/', (req, res) => res.json({ status: true, message: 'API VALENX STORE 24/7 Online 🚀' }));
 
-// 1. TikTok Downloader (TikWM - SUDAH BERHASIL 100%)
+// 1. TikTok Downloader (TikWM)
 const handleTikTok = async (req, res) => {
     const url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
@@ -28,7 +28,7 @@ const handleTikTok = async (req, res) => {
 app.get('/tiktok', handleTikTok);
 app.get('/tt', handleTikTok);
 
-// 2. AI Chat (SUDAH BAHASA INDONESIA 100%)
+// 2. AI Chat (Bahasa Indonesia)
 app.get('/ai', async (req, res) => {
     const text = req.query.text || req.query.q;
     if (!text) return res.json({ status: false, message: 'Isi parameter text!' });
@@ -64,37 +64,38 @@ app.get('/brat', async (req, res) => {
     });
 });
 
-// 4. Pinterest Search (Rotasi Multi-Server)
+// 4. Pinterest Search (4 Server Rotasi)
 const handlePin = async (req, res) => {
     const query = req.query.query || req.query.q || req.query.text;
     if (!query) return res.json({ status: false, message: 'Isi parameter query!' });
 
-    // Server 1: Widipe
+    // Server 1: Agatz
     try {
-        const r1 = await fetch(`https://widipe.com/download/pinterest?text=${encodeURIComponent(query)}`);
+        const r1 = await fetch(`https://api.agatz.xyz/api/pin?message=${encodeURIComponent(query)}`);
         const d1 = await r1.json();
-        if (d1 && d1.status && d1.result) {
-            const imgs = Array.isArray(d1.result) ? d1.result : [d1.result];
+        if (d1 && d1.status === 200 && d1.data && d1.data.length > 0) {
+            const imgs = d1.data.map(i => typeof i === 'string' ? i : (i.images || i.url || i.image));
             return res.json({ status: true, creator: 'VALENX STORE', result: imgs });
         }
     } catch (e) {}
 
-    // Server 2: Vreden
+    // Server 2: Widipe
     try {
-        const r2 = await fetch(`https://api.vreden.web.id/api/pinterest?query=${encodeURIComponent(query)}`);
+        const r2 = await fetch(`https://widipe.com/download/pinterest?text=${encodeURIComponent(query)}`);
         const d2 = await r2.json();
-        if (d2 && d2.result && d2.result.length > 0) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: d2.result });
+        if (d2 && d2.status && d2.result) {
+            const imgs = Array.isArray(d2.result) ? d2.result : [d2.result];
+            return res.json({ status: true, creator: 'VALENX STORE', result: imgs });
         }
     } catch (e) {}
 
-    // Server 3: Siputzx
+    // Server 3: BK9
     try {
-        const r3 = await fetch(`https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`);
+        const r3 = await fetch(`https://bk9.fun/search/pinterest?q=${encodeURIComponent(query)}`);
         const d3 = await r3.json();
-        if (d3 && d3.data && d3.data.length > 0) {
-            const imgs = d3.data.map(i => typeof i === 'string' ? i : (i.images || i.url));
-            return res.json({ status: true, creator: 'VALENX STORE', result: imgs });
+        if (d3 && d3.status && d3.BK9 && d3.BK9.length > 0) {
+            const imgs = d3.BK9.map(item => typeof item === 'string' ? item : (item.images || item.image || item.url)).filter(Boolean);
+            if (imgs.length > 0) return res.json({ status: true, creator: 'VALENX STORE', result: imgs });
         }
     } catch (e) {}
 
@@ -103,7 +104,7 @@ const handlePin = async (req, res) => {
 app.get('/pin', handlePin);
 app.get('/pinterest', handlePin);
 
-// 5. Instagram Downloader (Pembersih Link + 3 Server Rotasi)
+// 5. Instagram Downloader (4 Server Rotasi + Clean URL)
 const handleIG = async (req, res) => {
     let url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
@@ -112,28 +113,26 @@ const handleIG = async (req, res) => {
         url = url.split('?')[0];
     }
 
-    // Server 1: Widipe
+    // Server 1: Agatz
     try {
-        const r1 = await fetch(`https://widipe.com/download/igdl?url=${encodeURIComponent(url)}`);
+        const r1 = await fetch(`https://api.agatz.xyz/api/instagram?url=${encodeURIComponent(url)}`);
         const d1 = await r1.json();
-        if (d1 && d1.status && d1.result) {
-            let media = d1.result;
-            if (Array.isArray(media)) media = media[0]?.url || media[0];
-            else if (typeof media === 'object') media = media.url || media.video || media;
+        if (d1 && d1.status === 200 && d1.data) {
+            let media = Array.isArray(d1.data) ? d1.data[0]?.url || d1.data[0] : d1.data.url || d1.data;
             if (typeof media === 'string' && media.startsWith('http')) {
                 return res.json({ status: true, creator: 'VALENX STORE', result: media });
             }
         }
     } catch (e) {}
 
-    // Server 2: Vreden
+    // Server 2: Widipe
     try {
-        const r2 = await fetch(`https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`);
+        const r2 = await fetch(`https://widipe.com/download/igdl?url=${encodeURIComponent(url)}`);
         const d2 = await r2.json();
-        if (d2 && d2.result) {
+        if (d2 && d2.status && d2.result) {
             let media = d2.result;
             if (Array.isArray(media)) media = media[0]?.url || media[0];
-            else if (typeof media === 'object') media = media.url || media;
+            else if (typeof media === 'object') media = media.url || media.video || media;
             if (typeof media === 'string' && media.startsWith('http')) {
                 return res.json({ status: true, creator: 'VALENX STORE', result: media });
             }
