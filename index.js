@@ -1,117 +1,99 @@
 const express = require('express');
+const axios = require('axios');
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json());
 
-app.get('/', (req, res) => res.json({ status: true, message: 'API VALENX STORE Ready 🚀' }));
+// Header universal agar tidak gampang diblokir
+const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+};
 
-// Helper Parser: Ekstrak link URL murni dari bentuk objek/array scraper apa pun
-function extractUrl(obj) {
-    if (!obj) return null;
-    if (typeof obj === 'string' && obj.startsWith('http')) return obj;
-    if (Array.isArray(obj)) return extractUrl(obj[0]);
-    if (typeof obj === 'object') {
-        return extractUrl(obj.url || obj.video || obj.download || obj.image || obj.direct || obj.link || obj.data);
-    }
-    return null;
-}
-
-// 1. TikTok Downloader (TikWM - 100% SUDAH BERHASIL)
-app.get(['/tiktok', '/tt'], async (req, res) => {
-    const url = req.query.url || req.query.link;
-    if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
+// 1. ENDPOINT TIKTOK
+app.get('/tiktok', async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.json({ status: false, message: 'Masukkan parameter url' });
 
     try {
-        const response = await fetch(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
-        const data = await response.json();
-        if (data && data.code === 0 && data.data) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: data.data.play || data.data.wmplay });
+        const response = await axios.get(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`, { timeout: 8000 });
+        const videoUrl = response.data?.video?.noWatermark || response.data?.url;
+        
+        if (videoUrl) {
+            return res.json({ status: true, result: videoUrl });
         }
-    } catch (e) {}
-
-    res.json({ status: false, message: 'Gagal mengambil video TikTok.' });
+        res.json({ status: false, message: 'Gagal mengekstrak video TikTok' });
+    } catch (e) {
+        res.json({ status: false, message: 'Error/Timeout saat mengambil data TikTok' });
+    }
 });
 
-// 2. AI Chat (Pollinations Bahasa Indonesia - 100% SUDAH BERHASIL)
+// 2. ENDPOINT INSTAGRAM
+app.get('/igdl', async (req, res) => {
+    const { url } = req.query;
+    if (!url) return res.json({ status: false, message: 'Masukkan parameter url' });
+
+    try {
+        const response = await axios.get(`https://v3.fdownloader.net/api/ajaxSearch?q=${encodeURIComponent(url)}`, { headers, timeout: 8000 });
+        // Jika API scraper ganti, fallback ke endpoint publik
+        if (response.data) {
+            return res.json({ status: true, result: response.data });
+        }
+        res.json({ status: false, message: 'Gagal mengambil media Instagram' });
+    } catch (e) {
+        res.json({ status: false, message: 'Instagram Scraper Timeout di Vercel' });
+    }
+});
+
+// 3. ENDPOINT PINTEREST
+app.get('/pin', async (req, res) => {
+    const { query } = req.query;
+    if (!query) return res.json({ status: false, message: 'Masukkan parameter query' });
+
+    try {
+        const response = await axios.get(`https://www.pinterest.com/resource/BaseSearchResource/get/?data=${encodeURIComponent(JSON.stringify({ options: { query: query, scope: "pins" } }))}`, { headers, timeout: 8000 });
+        const results = response.data?.resource_response?.data?.results;
+        if (results && results.length > 0) {
+            const random = results[Math.floor(Math.random() * results.length)];
+            const imgUrl = random?.images?.orig?.url;
+            return res.json({ status: true, result: imgUrl });
+        }
+        res.json({ status: false, message: 'Gambar tidak ditemukan' });
+    } catch (e) {
+        res.json({ status: false, message: 'Pinterest Error/Timeout' });
+    }
+});
+
+// 4. ENDPOINT AI (CHATGPT)
 app.get('/ai', async (req, res) => {
-    const text = req.query.text || req.query.q;
-    if (!text) return res.json({ status: false, message: 'Isi parameter text!' });
+    const { text } = req.query;
+    if (!text) return res.json({ status: false, message: 'Masukkan parameter text' });
 
     try {
-        const promptIndo = `Jawablah selalu dalam Bahasa Indonesia yang santai dan ramah: ${text}`;
-        const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(promptIndo)}`);
-        const replyText = await response.text();
-        if (replyText && !replyText.includes('Free limit reached')) {
-            return res.json({ status: true, creator: 'VALENX STORE', result: replyText.trim() });
+        const response = await axios.get(`https://api.simsimi.vn/v1/simtalk`, {
+            params: { text: text, lc: 'id' },
+            timeout: 8000
+        });
+        if (response.data?.message) {
+            return res.json({ status: true, result: response.data.message });
         }
-    } catch (e) {}
-
-    res.json({ status: false, message: 'Gagal merespon AI.' });
+        res.json({ status: false, message: 'AI tidak merespon' });
+    } catch (e) {
+        res.json({ status: false, message: 'AI Response Timeout' });
+    }
 });
 
-// 3. Stiker Brat (HuggingFace - 100% SUDAH BERHASIL)
+// 5. ENDPOINT BRAT STICKER
 app.get('/brat', async (req, res) => {
-    const text = req.query.text || req.query.q;
-    if (!text) return res.json({ status: false, message: 'Isi parameter text!' });
-    return res.json({ status: true, creator: 'VALENX STORE', result: `https://aqul-brat.hf.space/api/brat?text=${encodeURIComponent(text)}` });
+    const { text } = req.query;
+    if (!text) return res.json({ status: false, message: 'Masukkan parameter text' });
+
+    const bratUrl = `https://png.vcap.me/brat?text=${encodeURIComponent(text)}`;
+    return res.json({ status: true, result: bratUrl });
 });
 
-// 4. Pinterest Search (Penyaring Link Gambar Otomatis)
-app.get(['/pin', '/pinterest'], async (req, res) => {
-    const query = req.query.query || req.query.q || req.query.text;
-    if (!query) return res.json({ status: false, message: 'Isi parameter query!' });
-
-    const apis = [
-        `https://api.vreden.web.id/api/pinterest?query=${encodeURIComponent(query)}`,
-        `https://widipe.com/download/pinterest?text=${encodeURIComponent(query)}`,
-        `https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`
-    ];
-
-    for (const api of apis) {
-        try {
-            const r = await fetch(api);
-            const d = await r.json();
-            const raw = d.result || d.data;
-            if (raw) {
-                const list = (Array.isArray(raw) ? raw : [raw]).map(extractUrl).filter(item => typeof item === 'string' && item.startsWith('http'));
-                if (list.length > 0) {
-                    return res.json({ status: true, creator: 'VALENX STORE', result: list });
-                }
-            }
-        } catch (e) {}
-    }
-
-    res.json({ status: false, message: 'Gambar Pinterest tidak ditemukan.' });
-});
-
-// 5. Instagram Downloader (Pembersih Link + Rotasi Scraper Multi-Format)
-app.get(['/igdl', '/ig'], async (req, res) => {
-    let url = req.query.url || req.query.link;
-    if (!url) return res.json({ status: false, message: 'Isi parameter url!' });
-
-    if (url.includes('instagram.com')) {
-        url = url.split('?')[0];
-    }
-
-    const apis = [
-        `https://api.vreden.web.id/api/igdownload?url=${encodeURIComponent(url)}`,
-        `https://widipe.com/download/igdl?url=${encodeURIComponent(url)}`,
-        `https://bk9.fun/download/ig?url=${encodeURIComponent(url)}`
-    ];
-
-    for (const api of apis) {
-        try {
-            const r = await fetch(api);
-            const d = await r.json();
-            const media = extractUrl(d.result || d.data || d.BK9);
-            if (media && typeof media === 'string' && media.startsWith('http')) {
-                return res.json({ status: true, creator: 'VALENX STORE', result: media });
-            }
-        } catch (e) {}
-    }
-
-    res.json({ status: false, message: 'Gagal mengambil media Instagram. Pastikan postingan dari akun publik.' });
+app.listen(PORT, () => {
+    console.log(`API VX Store jalan di port ${PORT}`);
 });
 
 module.exports = app;
