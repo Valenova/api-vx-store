@@ -10,96 +10,127 @@ const headers = {
 
 // Check Status
 app.get('/', (req, res) => {
-    res.json({ status: true, message: 'API VX Store Online & Ready' });
+    res.json({ status: true, message: 'API VX Store Online & Operational' });
 });
 
-// 1. TikTok Downloader (TikWM - Kencang & Stabil)
+// ================= 1. TIKTOK DOWNLOADER (TRIPLE FALLBACK ANTI-EROR) =================
 app.get('/tiktok', async (req, res) => {
     const { url } = req.query;
     if (!url) return res.json({ status: false, message: 'URL wajib diisi' });
 
+    // Server Utama: TikWM (Kencang)
     try {
-        const response = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { timeout: 8000 });
-        const videoUrl = response.data?.data?.play || response.data?.data?.wmplay;
-        
-        if (videoUrl) {
-            return res.json({ status: true, result: videoUrl });
-        }
-        res.json({ status: false, message: 'Gagal mengekstrak video TikTok' });
-    } catch (e) {
-        res.json({ status: false, message: 'Error/Timeout mengambil data TikTok' });
-    }
+        const res1 = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`, { headers, timeout: 6000 });
+        const videoUrl1 = res1.data?.data?.play || res1.data?.data?.wmplay;
+        if (videoUrl1) return res.json({ status: true, result: videoUrl1 });
+    } catch (e) {}
+
+    // Server Cadangan 1: Agatz API
+    try {
+        const res2 = await axios.get(`https://api.agatz.xyz/api/tiktok?url=${encodeURIComponent(url)}`, { headers, timeout: 6000 });
+        const videoUrl2 = res2.data?.data?.video || res2.data?.data?.no_watermark || res2.data?.data?.hdvideo;
+        if (videoUrl2) return res.json({ status: true, result: videoUrl2 });
+    } catch (e) {}
+
+    // Server Cadangan 2: Tiklydown API
+    try {
+        const res3 = await axios.get(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`, { headers, timeout: 6000 });
+        const videoUrl3 = res3.data?.video?.noWatermark || res3.data?.url;
+        if (videoUrl3) return res.json({ status: true, result: videoUrl3 });
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Semua server TikTok sedang tidak merespon' });
 });
 
-// 2. Instagram Downloader (Dual Fallback)
+// ================= 2. INSTAGRAM DOWNLOADER (DUAL FALLBACK) =================
 app.get('/igdl', async (req, res) => {
     const { url } = req.query;
     if (!url) return res.json({ status: false, message: 'URL wajib diisi' });
 
-    // Fallback Server 1
+    // Server Utama: Siputzx
     try {
-        const res1 = await axios.get(`https://api.agatz.xyz/api/instagram?url=${encodeURIComponent(url)}`, { headers, timeout: 8000 });
-        const data1 = res1.data?.data;
-        if (data1) {
-            const mediaUrl = Array.isArray(data1) ? (data1[0]?.url || data1[0]) : data1;
+        const res1 = await axios.get(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(url)}`, { headers, timeout: 7000 });
+        const media = res1.data?.data;
+        if (media) {
+            const mediaUrl = Array.isArray(media) ? (media[0]?.url || media[0]) : media;
             if (mediaUrl) return res.json({ status: true, result: mediaUrl });
         }
     } catch (e) {}
 
-    // Fallback Server 2
+    // Server Cadangan: Agatz
     try {
-        const res2 = await axios.get(`https://api.siputzx.my.id/api/d/igdl?url=${encodeURIComponent(url)}`, { headers, timeout: 8000 });
+        const res2 = await axios.get(`https://api.agatz.xyz/api/instagram?url=${encodeURIComponent(url)}`, { headers, timeout: 7000 });
         const data2 = res2.data?.data;
         if (data2) {
             const mediaUrl2 = Array.isArray(data2) ? (data2[0]?.url || data2[0]) : data2;
             if (mediaUrl2) return res.json({ status: true, result: mediaUrl2 });
         }
-        res.json({ status: false, message: 'Gagal mengekstrak media IG' });
-    } catch (e) {
-        res.json({ status: false, message: 'IP Vercel terblokir / Scraper IG Timeout' });
-    }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gagal mengambil media Instagram' });
 });
 
-// 3. Pinterest Search
+// ================= 3. PINTEREST SEARCH (DUAL FALLBACK) =================
 app.get('/pin', async (req, res) => {
     const { query } = req.query;
     if (!query) return res.json({ status: false, message: 'Query wajib diisi' });
 
+    // Server Utama: Siputzx
     try {
-        const response = await axios.get(`https://www.pinterest.com/resource/BaseSearchResource/get/?data=${encodeURIComponent(JSON.stringify({ options: { query, scope: "pins" } }))}`, { headers, timeout: 8000 });
-        const results = response.data?.resource_response?.data?.results;
+        const res1 = await axios.get(`https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`, { headers, timeout: 7000 });
+        if (res1.data?.data && res1.data.data.length > 0) {
+            const random = res1.data.data[Math.floor(Math.random() * res1.data.data.length)];
+            const imgUrl = random?.images_url || random?.url || random;
+            if (imgUrl) return res.json({ status: true, result: imgUrl });
+        }
+    } catch (e) {}
+
+    // Server Cadangan: Native Pinterest
+    try {
+        const res2 = await axios.get(`https://www.pinterest.com/resource/BaseSearchResource/get/?data=${encodeURIComponent(JSON.stringify({ options: { query, scope: "pins" } }))}`, { headers, timeout: 7000 });
+        const results = res2.data?.resource_response?.data?.results;
         if (results && results.length > 0) {
             const random = results[Math.floor(Math.random() * results.length)];
             const imgUrl = random?.images?.orig?.url;
             if (imgUrl) return res.json({ status: true, result: imgUrl });
         }
-        res.json({ status: false, message: 'Gambar tidak ditemukan' });
-    } catch (e) {
-        res.json({ status: false, message: 'Error/Timeout Pinterest' });
-    }
+    } catch (e) {}
+
+    res.json({ status: false, message: 'Gambar Pinterest tidak ditemukan' });
 });
 
-// 4. AI Chat
+// ================= 4. AI CHAT (DUAL FALLBACK) =================
 app.get('/ai', async (req, res) => {
     const { text } = req.query;
     if (!text) return res.json({ status: false, message: 'Teks wajib diisi' });
 
+    // Server Utama: Siputzx AI
     try {
-        const response = await axios.get(`https://api.simsimi.vn/v1/simtalk`, { params: { text, lc: 'id' }, timeout: 8000 });
-        if (response.data?.message) return res.json({ status: true, result: response.data.message });
-        res.json({ status: false, message: 'AI tidak merespon' });
-    } catch (e) {
-        res.json({ status: false, message: 'Error/Timeout AI' });
-    }
+        const res1 = await axios.get(`https://api.siputzx.my.id/api/ai/chatgpt?content=${encodeURIComponent(text)}`, { headers, timeout: 7000 });
+        if (res1.data?.data) return res.json({ status: true, result: res1.data.data });
+    } catch (e) {}
+
+    // Server Cadangan: SimSimi VN
+    try {
+        const res2 = await axios.get(`https://api.simsimi.vn/v1/simtalk`, { params: { text, lc: 'id' }, headers, timeout: 7000 });
+        if (res2.data?.message) return res.json({ status: true, result: res2.data.message });
+    } catch (e) {}
+
+    res.json({ status: false, message: 'AI sedang tidak merespon' });
 });
 
-// 5. Brat Sticker Generator
+// ================= 5. BRAT STICKER GENERATOR =================
 app.get('/brat', async (req, res) => {
     const { text } = req.query;
     if (!text) return res.json({ status: false, message: 'Teks wajib diisi' });
 
-    const bratUrl = `https://png.vcap.me/brat?text=${encodeURIComponent(text)}`;
-    return res.json({ status: true, result: bratUrl });
+    try {
+        const bratUrl = `https://api.siputzx.my.id/api/m/brat?text=${encodeURIComponent(text)}`;
+        return res.json({ status: true, result: bratUrl });
+    } catch (e) {
+        const fallbackUrl = `https://png.vcap.me/brat?text=${encodeURIComponent(text)}`;
+        return res.json({ status: true, result: fallbackUrl });
+    }
 });
 
 module.exports = app;
