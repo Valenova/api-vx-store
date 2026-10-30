@@ -8,47 +8,45 @@ const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 };
 
-// Test Endpoint Utama
+// Check Status
 app.get('/', (req, res) => {
-    res.json({ status: true, message: 'API VX Store Active' });
+    res.json({ status: true, message: 'API VX Store Online & Ready' });
 });
 
 // 1. TikTok Downloader
 app.get('/tiktok', async (req, res) => {
     const { url } = req.query;
-    if (!url) return res.json({ status: false, message: 'Parameter url wajib diisi' });
+    if (!url) return res.json({ status: false, message: 'URL wajib diisi' });
 
     try {
         const response = await axios.get(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`, { timeout: 9000 });
         const videoUrl = response.data?.video?.noWatermark || response.data?.url;
         if (videoUrl) return res.json({ status: true, result: videoUrl });
-        
-        res.json({ status: false, message: 'Gagal mengambil video TikTok' });
+        res.json({ status: false, message: 'Gagal mengekstrak video TikTok' });
     } catch (e) {
-        res.json({ status: false, message: 'Error/Timeout mengambil data TikTok' });
+        res.json({ status: false, message: 'Error/Timeout TikTok' });
     }
 });
 
 // 2. Instagram Downloader
 app.get('/igdl', async (req, res) => {
     const { url } = req.query;
-    if (!url) return res.json({ status: false, message: 'Parameter url wajib diisi' });
+    if (!url) return res.json({ status: false, message: 'URL wajib diisi' });
 
     try {
         const response = await axios.get(`https://api.vkrnotfficial.org/api/download/ig?url=${encodeURIComponent(url)}`, { headers, timeout: 9000 });
         const media = response.data?.data?.url || response.data?.result;
         if (media) return res.json({ status: true, result: Array.isArray(media) ? media[0] : media });
-
-        res.json({ status: false, message: 'Gagal mengambil media IG' });
+        res.json({ status: false, message: 'Gagal mengekstrak media IG' });
     } catch (e) {
-        res.json({ status: false, message: 'Timeout / IP Vercel terblokir saat ambil IG' });
+        res.json({ status: false, message: 'Error/Timeout IG' });
     }
 });
 
 // 3. Pinterest Search
 app.get('/pin', async (req, res) => {
     const { query } = req.query;
-    if (!query) return res.json({ status: false, message: 'Parameter query wajib diisi' });
+    if (!query) return res.json({ status: false, message: 'Query wajib diisi' });
 
     try {
         const response = await axios.get(`https://www.pinterest.com/resource/BaseSearchResource/get/?data=${encodeURIComponent(JSON.stringify({ options: { query, scope: "pins" } }))}`, { headers, timeout: 9000 });
@@ -67,26 +65,24 @@ app.get('/pin', async (req, res) => {
 // 4. AI Chat
 app.get('/ai', async (req, res) => {
     const { text } = req.query;
-    if (!text) return res.json({ status: false, message: 'Parameter text wajib diisi' });
+    if (!text) return res.json({ status: false, message: 'Teks wajib diisi' });
 
     try {
         const response = await axios.get(`https://api.simsimi.vn/v1/simtalk`, { params: { text, lc: 'id' }, timeout: 9000 });
         if (response.data?.message) return res.json({ status: true, result: response.data.message });
-
         res.json({ status: false, message: 'AI tidak merespon' });
     } catch (e) {
         res.json({ status: false, message: 'Error/Timeout AI' });
     }
 });
 
-// 5. Brat Generator
+// 5. Brat Sticker Generator
 app.get('/brat', async (req, res) => {
     const { text } = req.query;
-    if (!text) return res.json({ status: false, message: 'Parameter text wajib diisi' });
+    if (!text) return res.json({ status: false, message: 'Teks wajib diisi' });
 
     const bratUrl = `https://png.vcap.me/brat?text=${encodeURIComponent(text)}`;
     return res.json({ status: true, result: bratUrl });
 });
 
-// Export handler untuk Vercel Serverless
 module.exports = app;
