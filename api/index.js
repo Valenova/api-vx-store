@@ -7,9 +7,9 @@ app.use(cors());
 app.use(express.json());
 
 const CREATOR = "VALENX STORE";
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
-// Helper Fetch Multi-Provider untuk Cadangan
+// Helper Fetch Multi-Provider Universal
 async function fetchProvider(urls, timeout = 10000) {
     for (const url of urls) {
         try {
@@ -22,12 +22,12 @@ async function fetchProvider(urls, timeout = 10000) {
     return null;
 }
 
-// Root Check
+// 0. Root Check
 app.get('/', (req, res) => {
     return res.json({
         status: true,
         creator: CREATOR,
-        message: "API Server VX-STORE Active & Ready 🚀"
+        message: "API Server VX-STORE Active & Multi-Engine Ready 🚀"
     });
 });
 
@@ -61,12 +61,12 @@ app.get('/api/pin', async (req, res) => {
     return res.json({ status: true, creator: CREATOR, result: fallbackImg });
 });
 
-// 3. TIKTOK DOWNLOADER (Diperkuat Multi-Method & Header Khusus)
+// 3. TIKTOK DOWNLOADER (Multi-Engine Exhaustive Fallback)
 app.get('/api/tiktok', async (req, res) => {
     const url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, creator: CREATOR, message: "Parameter ?url= wajib diisi" });
 
-    // Metode 1: TikWM Direct Post dengan Cookie/Header simulasi browser
+    // Coba Jalur 1: TikWM Direct Post
     try {
         const tikwmRes = await axios.post('https://www.tikwm.com/api/', new URLSearchParams({ url: url, count: 12, cursor: 0, web: 1, hd: 1 }), {
             headers: {
@@ -75,23 +75,29 @@ app.get('/api/tiktok', async (req, res) => {
                 'Origin': 'https://www.tikwm.com',
                 'Referer': 'https://www.tikwm.com/'
             },
-            timeout: 8000
+            timeout: 7000
         });
-        
         const playUrl = tikwmRes.data?.data?.hdplay || tikwmRes.data?.data?.play;
-        if (playUrl) {
-            return res.json({ status: true, creator: CREATOR, result: playUrl });
-        }
+        if (playUrl) return res.json({ status: true, creator: CREATOR, result: playUrl });
     } catch (e) {}
 
-    // Metode 2: Fallback ke Vreden & Widipe
-    const data = await fetchProvider([
+    // Coba Jalur 2, 3, 4: Menggunakan Provider Eksternal Cadangan
+    const apiData = await fetchProvider([
         `https://api.vreden.web.id/api/tiktok?url=${encodeURIComponent(url)}`,
-        `https://widipe.com/download/tiktok?url=${encodeURIComponent(url)}`
+        `https://widipe.com/download/tiktok?url=${encodeURIComponent(url)}`,
+        `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`
     ]);
 
-    const ttUrl = data?.result?.video || data?.result?.noWatermark || data?.data?.nowm || data?.data?.video || data?.result?.play;
-    if (ttUrl) return res.json({ status: true, creator: CREATOR, result: ttUrl });
+    const videoUrl = apiData?.result?.video || 
+                     apiData?.result?.noWatermark || 
+                     apiData?.data?.nowm || 
+                     apiData?.data?.video || 
+                     apiData?.result?.play || 
+                     apiData?.video?.noWatermark;
+
+    if (videoUrl) {
+        return res.json({ status: true, creator: CREATOR, result: videoUrl });
+    }
 
     return res.json({ status: false, creator: CREATOR, message: "Gagal mendownload TikTok" });
 });
