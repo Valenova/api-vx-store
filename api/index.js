@@ -17,7 +17,7 @@ app.get('/', (req, res) => {
     });
 });
 
-// 1. AI Chat - Paling simpel pakai Pollinations (Langsung balasan teks)
+// 1. AI Chat (Direct Pollinations AI)
 app.get('/api/ai', async (req, res) => {
     const text = req.query.text || req.query.prompt || req.query.q;
     if (!text) return res.json({ status: false, creator: CREATOR, message: "Parameter ?text= wajib diisi" });
@@ -28,56 +28,17 @@ app.get('/api/ai', async (req, res) => {
             return res.json({ status: true, creator: CREATOR, result: response.data });
         }
     } catch (e) {}
-    
+
     return res.json({ status: false, creator: CREATOR, message: "AI sedang tidak merespon" });
 });
 
-// 2. TikTok Downloader - Menggunakan Tiklydown Direct
-app.get('/api/tiktok', async (req, res) => {
-    const url = req.query.url || req.query.link;
-    if (!url) return res.json({ status: false, creator: CREATOR, message: "Parameter ?url= wajib diisi" });
-
-    try {
-        const response = await axios.get(`https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`);
-        const videoUrl = response.data?.video?.noWatermark || response.data?.video?.watermark || response.data?.url;
-        if (videoUrl) {
-            return res.json({ status: true, creator: CREATOR, result: videoUrl });
-        }
-    } catch (e) {}
-
-    return res.json({ status: false, creator: CREATOR, message: "Gagal mendownload TikTok" });
-});
-
-// 3. Instagram Downloader
-app.get('/api/igdl', async (req, res) => {
-    const url = req.query.url || req.query.link;
-    if (!url) return res.json({ status: false, creator: CREATOR, message: "Parameter ?url= wajib diisi" });
-
-    try {
-        const response = await axios.get(`https://widipe.com/download/igdl?url=${encodeURIComponent(url)}`);
-        const igUrl = response.data?.result?.[0]?.url || response.data?.result || response.data?.url;
-        if (igUrl) {
-            return res.json({ status: true, creator: CREATOR, result: igUrl });
-        }
-    } catch (e) {}
-
-    return res.json({ status: false, creator: CREATOR, message: "Gagal mendownload IG" });
-});
-
-// 4. Pinterest Search
+// 2. Pinterest (Direct Image)
 app.get('/api/pin', async (req, res) => {
     const query = req.query.query || req.query.q || req.query.text;
     if (!query) return res.json({ status: false, creator: CREATOR, message: "Parameter ?query= wajib diisi" });
 
-    try {
-        const response = await axios.get(`https://widipe.com/pinterest?query=${encodeURIComponent(query)}`);
-        const imgUrl = response.data?.result?.[0] || response.data?.result;
-        if (imgUrl) {
-            return res.json({ status: true, creator: CREATOR, result: imgUrl });
-        }
-    } catch (e) {}
-
-    return res.json({ status: false, creator: CREATOR, message: "Gambar Pinterest tidak ditemukan" });
+    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(query)}?width=720&height=1280&nologo=true`;
+    return res.json({ status: true, creator: CREATOR, result: imgUrl });
 });
 
 module.exports = app;
