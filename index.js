@@ -117,71 +117,7 @@ app.get('/api/pin', async (req, res) => {
 // ================= 5. AI CHATGPT / DEEPSEEK =================
 app.get('/api/ai', async (req, res) => {
     const { text } = req.query;
-    if (!text) return res.json({ status: false, creator: CREATOR, message: "Parameter ?text= wajib diisi" });
-
-    const data = await fetchProvider([
-        `https://api.siputzx.my.id/api/ai/deepseek?prompt=${encodeURIComponent(text)}`,
-        `https://api.siputzx.my.id/api/ai/gpt3?prompt=${encodeURIComponent(text)}`,
-        `https://api.agatz.xyz/api/degreeai?message=${encodeURIComponent(text)}`,
-        `https://widipe.com/openai?text=${encodeURIComponent(text)}`
-    ]);
-
-    const aiAnswer = data?.data || data?.result;
-    if (aiAnswer) {
-        return res.json({ status: true, creator: CREATOR, result: aiAnswer });
-    }
-    res.json({ status: false, creator: CREATOR, message: "AI sedang tidak merespon" });
-});
-
-// ================= 6. STALK INSTAGRAM =================
-app.get('/api/stalkig', async (req, res) => {
-    const { username } = req.query;
-    if (!username) return res.json({ status: false, creator: CREATOR, message: "Parameter ?username= wajib diisi" });
-
-    const cleanUser = username.replace('@', '').trim();
-    const data = await fetchProvider([
-        `https://api.siputzx.my.id/api/s/stalkig?username=${encodeURIComponent(cleanUser)}`,
-        `https://api.agatz.xyz/api/stalkig?username=${encodeURIComponent(cleanUser)}`
-    ]);
-
-    if (data?.data) {
-        const d = data.data;
-        return res.json({
-            status: true,
-            creator: CREATOR,
-            result: {
-                username: d.username || cleanUser,
-                fullname: d.fullName || d.full_name || '-',
-                followers: d.followers || 0,
-                following: d.following || 0,
-                posts: d.posts || 0,
-                bio: d.biography || d.bio || '-',
-                avatar: d.profilePic || d.profile_pic || ''
-            }
-        });
-    }
-    res.json({ status: false, creator: CREATOR, message: "Username IG tidak ditemukan" });
-});
-
-// ================= 7. STALK TIKTOK =================
-app.get('/api/stalktt', async (req, res) => {
-    const { username } = req.query;
-    if (!username) return res.json({ status: false, creator: CREATOR, message: "Parameter ?username= wajib diisi" });
-
-    const cleanUser = username.replace('@', '').trim();
-    const data = await fetchProvider([
-        `https://api.siputzx.my.id/api/s/stalktt?username=${encodeURIComponent(cleanUser)}`,
-        `https://api.agatz.xyz/api/stalktt?username=${encodeURIComponent(cleanUser)}`
-    ]);
-
-    if (data?.data) {
-        const d = data.data;
-        return res.json({
-            status: true,
-            creator: CREATOR,
-            result: {
-                username: d.username || cleanUser,
-              const express = require('express');
+    if (!text) return res.json({ status: false, creconst express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 
@@ -204,7 +140,7 @@ async function fetchProvider(urls, timeout = 12000) {
     return null;
 }
 
-// Route Root (Health Check)
+// Health Check
 app.get('/', (req, res) => {
     return res.json({
         status: true,
@@ -276,99 +212,5 @@ app.get('/api/igdl', async (req, res) => {
     return res.json({ status: false, creator: CREATOR, message: "Gagal mendownload IG" });
 });
 
-// 4. Pinterest Search
-app.get('/api/pin', async (req, res) => {
-    const { query } = req.query;
-    if (!query) return res.json({ status: false, creator: CREATOR, message: "Parameter ?query= wajib diisi" });
-
-    const data = await fetchProvider([
-        `https://api.siputzx.my.id/api/s/pinterest?query=${encodeURIComponent(query)}`,
-        `https://api.agatz.xyz/api/pinsearch?message=${encodeURIComponent(query)}`,
-        `https://widipe.com/pinterest?query=${encodeURIComponent(query)}`
-    ]);
-
-    const imgUrl = data?.data?.[0]?.images_url || data?.data?.[0] || data?.result?.[0];
-    if (imgUrl) return res.json({ status: true, creator: CREATOR, result: imgUrl });
-
-    return res.json({ status: false, creator: CREATOR, message: "Gambar Pinterest tidak ditemukan" });
-});
-
-// 5. AI ChatGPT
-app.get('/api/ai', async (req, res) => {
-    const { text } = req.query;
-    if (!text) return res.json({ status: false, creator: CREATOR, message: "Parameter ?text= wajib diisi" });
-
-    const data = await fetchProvider([
-        `https://api.siputzx.my.id/api/ai/deepseek?prompt=${encodeURIComponent(text)}`,
-        `https://api.siputzx.my.id/api/ai/gpt3?prompt=${encodeURIComponent(text)}`,
-        `https://api.agatz.xyz/api/degreeai?message=${encodeURIComponent(text)}`,
-        `https://widipe.com/openai?text=${encodeURIComponent(text)}`
-    ]);
-
-    const aiAnswer = data?.data || data?.result;
-    if (aiAnswer) return res.json({ status: true, creator: CREATOR, result: aiAnswer });
-
-    return res.json({ status: false, creator: CREATOR, message: "AI sedang tidak merespon" });
-});
-
-// 6. Stalk IG
-app.get('/api/stalkig', async (req, res) => {
-    const { username } = req.query;
-    if (!username) return res.json({ status: false, creator: CREATOR, message: "Parameter ?username= wajib diisi" });
-
-    const cleanUser = username.replace('@', '').trim();
-    const data = await fetchProvider([
-        `https://api.siputzx.my.id/api/s/stalkig?username=${encodeURIComponent(cleanUser)}`,
-        `https://api.agatz.xyz/api/stalkig?username=${encodeURIComponent(cleanUser)}`
-    ]);
-
-    if (data?.data) {
-        const d = data.data;
-        return res.json({
-            status: true,
-            creator: CREATOR,
-            result: {
-                username: d.username || cleanUser,
-                fullname: d.fullName || d.full_name || '-',
-                followers: d.followers || 0,
-                following: d.following || 0,
-                posts: d.posts || 0,
-                bio: d.biography || d.bio || '-',
-                avatar: d.profilePic || d.profile_pic || ''
-            }
-        });
-    }
-    return res.json({ status: false, creator: CREATOR, message: "Username IG tidak ditemukan" });
-});
-
-// 7. Stalk TikTok
-app.get('/api/stalktt', async (req, res) => {
-    const { username } = req.query;
-    if (!username) return res.json({ status: false, creator: CREATOR, message: "Parameter ?username= wajib diisi" });
-
-    const cleanUser = username.replace('@', '').trim();
-    const data = await fetchProvider([
-        `https://api.siputzx.my.id/api/s/stalktt?username=${encodeURIComponent(cleanUser)}`,
-        `https://api.agatz.xyz/api/stalktt?username=${encodeURIComponent(cleanUser)}`
-    ]);
-
-    if (data?.data) {
-        const d = data.data;
-        return res.json({
-            status: true,
-            creator: CREATOR,
-            result: {
-                username: d.username || cleanUser,
-                nickname: d.nickname || '-',
-                followers: d.followers || 0,
-                following: d.following || 0,
-                likes: d.likes || 0,
-                bio: d.signature || d.bio || '-',
-                avatar: d.avatar || ''
-            }
-        });
-    }
-    return res.json({ status: false, creator: CREATOR, message: "Username TikTok tidak ditemukan" });
-});
-
+// Export Express App khusus Serverless Vercel
 module.exports = app;
