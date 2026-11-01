@@ -1,14 +1,9 @@
 {
   "name": "api-vx-store",
   "version": "1.0.0",
-  "description": "Backend API Central for VALENX STORE & Vx-md Bot",
   "main": "api/index.js",
-  "scripts": {
-    "start": "node api/index.js"
-  },
   "dependencies": {
     "axios": "^1.6.8",
-    "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "express": "^4.19.2"
   }
