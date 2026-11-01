@@ -69,13 +69,25 @@ app.get('/api/tiktok', async (req, res) => {
     const url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, creator: CREATOR, message: "Parameter ?url= wajib diisi" });
 
+    // Provider TikWM (Paling Stabil)
+    try {
+        const tikwmRes = await axios.post('https://www.tikwm.com/api/', new URLSearchParams({ url: url, count: 12, cursor: 0, web: 1 }), {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'User-Agent': USER_AGENT },
+            timeout: 8000
+        });
+        if (tikwmRes.data && tikwmRes.data.data && tikwmRes.data.data.play) {
+            return res.json({ status: true, creator: CREATOR, result: tikwmRes.data.data.play });
+        }
+    } catch (e) {}
+
+    // Backup Provider
     const data = await fetchProvider([
-        `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`,
         `https://api.vreden.web.id/api/tiktok?url=${encodeURIComponent(url)}`,
-        `https://widipe.com/download/tiktok?url=${encodeURIComponent(url)}`
+        `https://widipe.com/download/tiktok?url=${encodeURIComponent(url)}`,
+        `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`
     ]);
 
-    const ttUrl = data?.video?.noWatermark || data?.result?.video || data?.data?.nowm || data?.data?.video || data?.result?.noWatermark;
+    const ttUrl = data?.video?.noWatermark || data?.result?.video || data?.data?.nowm || data?.data?.video || data?.result?.noWatermark || data?.result?.play;
     if (ttUrl) return res.json({ status: true, creator: CREATOR, result: ttUrl });
 
     return res.json({ status: false, creator: CREATOR, message: "Gagal mendownload TikTok" });
