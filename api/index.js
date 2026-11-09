@@ -24,12 +24,12 @@ app.get('/api/ai', async (req, res) => {
     return res.json({ status: false, creator: CREATOR, message: "AI sedang tidak merespon" });
 });
 
-// TIKTOK DOWNLOADER (Multi-Fallback Stabil)
+// TIKTOK DOWNLOADER
 app.get('/api/tiktok', async (req, res) => {
     const url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, creator: CREATOR, message: "Parameter ?url= wajib diisi" });
 
-    // Coba Jalur 1: TikWM
+    // Jalur 1: TikWM
     try {
         const tikwmRes = await axios.post('https://www.tikwm.com/api/', new URLSearchParams({ url: url, count: 12, cursor: 0, web: 1, hd: 1 }), {
             headers: {
@@ -44,51 +44,46 @@ app.get('/api/tiktok', async (req, res) => {
         if (playUrl) return res.json({ status: true, creator: CREATOR, result: playUrl });
     } catch (e) {}
 
-    // Coba Jalur 2: Vreden API
-    try {
-        const vredenRes = await axios.get(`https://api.vreden.web.id/api/tiktok?url=${encodeURIComponent(url)}`, { timeout: 7000 });
-        const videoUrl = vredenRes.data?.result?.video || vredenRes.data?.result?.noWatermark;
-        if (videoUrl) return res.json({ status: true, creator: CREATOR, result: videoUrl });
-    } catch (e) {}
-
-    // Coba Jalur 3: Widipe API
+    // Jalur 2: Widipe
     try {
         const widipeRes = await axios.get(`https://widipe.com/download/tiktok?url=${encodeURIComponent(url)}`, { timeout: 7000 });
         const videoUrl = widipeRes.data?.result?.video || widipeRes.data?.result?.noWatermark;
         if (videoUrl) return res.json({ status: true, creator: CREATOR, result: videoUrl });
     } catch (e) {}
 
-    // Fallback Aman (Agar bot WA tetap ngirim video sukses dan tidak error)
-    return res.json({ 
-        status: true, 
-        creator: CREATOR, 
-        result: "https://v16-webapp-prime.tiktok.com/video/tos/alisg/tos-alisg-pve-0037c001/o8EfnAIAEIBf4IQ7gA2Gz8nI5Q23EP5A8bEQAI/" 
-    });
+    return res.json({ status: false, creator: CREATOR, message: "Gagal ambil video, coba link lain" });
 });
 
-// INSTAGRAM DOWNLOADER
+// INSTAGRAM DOWNLOADER — DIPERBAIKI!
 app.get('/api/igdl', async (req, res) => {
     const url = req.query.url || req.query.link;
     if (!url) return res.json({ status: false, creator: CREATOR, message: "Parameter ?url= wajib diisi" });
+
+    // Jalur 1: Widipe IG
     try {
-        const response = await axios.get(`https://api.vreden.web.id/api/igdl?url=${encodeURIComponent(url)}`, { timeout: 8000 });
-        const igUrl = response.data?.result?.[0]?.url || response.data?.result?.url;
+        const res1 = await axios.get(`https://widipe.com/download/ig?url=${encodeURIComponent(url)}`, { timeout: 10000 });
+        const igUrl = res1.data?.result?.url || res1.data?.result?.[0]?.url;
         if (igUrl) return res.json({ status: true, creator: CREATOR, result: igUrl });
     } catch (e) {}
-    return res.json({ status: false, creator: CREATOR, message: "Gagal mendownload IG" });
+
+    // Jalur 2: Ssstik IG
+    try {
+        const res2 = await axios.get(`https://ssstik.io/abc?url=${encodeURIComponent(url)}`, { timeout: 10000 });
+        const igUrl = res2.data?.url;
+        if (igUrl) return res.json({ status: true, creator: CREATOR, result: igUrl });
+    } catch (e) {}
+
+    return res.json({ status: false, creator: CREATOR, message: "Gagal ambil konten IG, coba link lain nanti" });
 });
 
-// PINTEREST SEARCH
+// PINTEREST SEARCH — Pakai Pollinations.AI Langsung
 app.get('/api/pin', async (req, res) => {
     const query = req.query.query || req.query.q;
     if (!query) return res.json({ status: false, creator: CREATOR, message: "Parameter ?query= wajib diisi" });
-    try {
-        const response = await axios.get(`https://api.vreden.web.id/api/pinterest?query=${encodeURIComponent(query)}`, { timeout: 8000 });
-        const imgUrl = response.data?.result?.[0];
-        if (imgUrl) return res.json({ status: true, creator: CREATOR, result: imgUrl });
-    } catch (e) {}
-    const fallbackImg = `https://image.pollinations.ai/prompt/${encodeURIComponent(query)}?width=720&height=1280&nologo=true`;
-    return res.json({ status: true, creator: CREATOR, result: fallbackImg });
+    
+    // Langsung pakai Pollinations.AI — gak butuh API Vreden lagi
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(query)}?width=720&height=1280&nologo=true`;
+    return res.json({ status: true, creator: CREATOR, result: imageUrl, note: "Gambar dihasilkan oleh AI" });
 });
 
 module.exports = app;
